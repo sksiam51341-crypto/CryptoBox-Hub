@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>CryptoBox Hub - Binance Red Packet & Crypto Box Claimer</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            binance: {
+              yellow: '#F0B90B',
+              yellowHover: '#DFAC0A',
+              dark: '#181A20',
+              card: '#1E2329',
+              darkBorder: '#2B313A',
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+    }
+
+    body {
+      padding-top: var(--sat);
+      padding-bottom: calc(var(--sab) + 72px);
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* Fixed Clear & Crisp Background Image across full screen */
+    .app-bg-image {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-image: url('https://i.ibb.co.com/8Dh6JwZf/file-000000007a1881fa9e75fae631bd2c06.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: blur(1px);
+      opacity: 0.85;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .dark .app-bg-image {
+      opacity: 0.80;
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .glass-nav {
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .card-transition {
+      transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card-exit {
+      opacity: 0;
+      transform: translateX(-40px) scale(0.95);
+    }
+
+    .card-enter {
+      opacity: 0;
+      transform: translateX(40px) scale(0.95);
+    }
+
+    .shimmer {
+      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite;
+    }
+
+    .dark .shimmer {
+      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+  </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 dark:bg-[#0c1015] dark:text-slate-100 min-h-screen transition-colors duration-200 antialiased font-sans flex flex-col justify-between relative overflow-x-hidden">
+
+  <!-- ==================== BACKGROUND IMAGE LAYER ==================== -->
+  <div class="app-bg-image"></div>
+
+  <!-- ==================== TOP APP HEADER ==================== -->
+  <header class="sticky top-0 z-30 bg-white/90 dark:bg-[#131822]/90 border-b border-slate-200/80 dark:border-slate-800/80 glass-nav relative">
+    <div class="max-w-md mx-auto px-4 h-16 flex items-center justify-between">
+      
+      <!-- User Capsule -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="App.switchTab('profile')">
+        <div class="relative">
+          <div id="header-avatar" class="w-10 h-10 rounded-full bg-binance-yellow/20 border border-binance-yellow/50 flex items-center justify-center font-bold text-slate-800 dark:text-binance-yellow text-sm overflow-hidden shadow-sm">
+            CB
+          </div>
+          <span class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-[#131822] rounded-full"></span>
+        </div>
+        <div class="flex flex-col">
+          <span id="header-name" class="font-bold text-sm tracking-tight truncate max-w-[150px]">Anonymous User</span>
+          <div class="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="active-queue-count">Loading codes...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="flex items-center gap-1">
+        <button onclick="App.fetchCodes()" class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition" title="Refresh Codes">
+          <i data-lucide="rotate-cw" class="w-5 h-5"></i>
+        </button>
+        <button onclick="App.openSettings()" class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition" title="Settings">
+          <i data-lucide="sliders" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT AREA ==================== -->
+  <main class="max-w-md mx-auto w-full px-4 py-6 flex-1 flex flex-col justify-center relative z-10">
+    
+    <!-- VIEW: CAROUSEL FEED (DEFAULT) -->
+    <section id="view-home" class="w-full space-y-4">
+      
+      <!-- Progress Bar & Queue Indicator -->
+      <div class="flex items-center justify-between text-xs px-1 text-slate-500 dark:text-slate-400 font-medium">
+        <span class="flex items-center gap-1.5">
+          <i data-lucide="sparkles" class="w-4 h-4 text-binance-yellow"></i>
+          <span>Live Binance Crypto Box</span>
+        </span>
+        <span id="queue-indicator" class="font-mono bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-full text-[11px]">0 / 0</span>
+      </div>
+
+      <!-- Single Code Card Area -->
+      <div id="single-card-slot" class="w-full relative min-h-[380px] flex items-center justify-center">
+        <!-- Initial Loader State -->
+        <div class="w-full bg-white/95 dark:bg-[#141922]/95 backdrop-blur-md p-6 rounded-3xl border border-slate-200 dark:border-slate-800/80 shadow-lg shimmer h-80 flex flex-col justify-between">
+          <div class="h-10 w-24 bg-slate-200 dark:bg-slate-700/50 rounded-xl"></div>
+          <div class="h-14 w-full bg-slate-200 dark:bg-slate-700/50 rounded-xl"></div>
+          <div class="h-12 w-full bg-slate-200 dark:bg-slate-700/50 rounded-xl"></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- VIEW: SAVED -->
+    <section id="view-saved" class="space-y-4 hidden">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <h2 class="text-base font-bold">Saved Crypto Boxes</h2>
+          <p class="text-xs text-slate-400">Codes bookmarked for later use</p>
+        </div>
+        <button onclick="App.clearSavedCodes()" class="text-xs font-semibold text-rose-500 hover:underline flex items-center gap-1">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span>Clear All</span>
+        </button>
+      </div>
+      <div id="saved-codes-list" class="space-y-3 min-h-[200px]">
+        <!-- Saved items rendered here -->
+      </div>
+    </section>
+
+    <!-- VIEW: PROFILE & STATS -->
+    <section id="view-profile" class="space-y-4 hidden">
+      <div class="bg-white/95 dark:bg-[#141922]/95 backdrop-blur-md p-6 rounded-3xl border border-slate-200 dark:border-slate-800/80 shadow-sm text-center space-y-4">
+        <div class="relative inline-block mx-auto">
+          <div id="profile-avatar-large" class="w-20 h-20 rounded-full bg-binance-yellow/20 border-2 border-binance-yellow/50 flex items-center justify-center font-bold text-2xl text-slate-800 dark:text-binance-yellow shadow-inner">
+            CB
+          </div>
+          <span class="absolute bottom-0 right-0 p-1.5 bg-emerald-500 text-white rounded-full border-2 border-white dark:border-[#141922]">
+            <i data-lucide="check" class="w-3 h-3"></i>
+          </span>
+        </div>
+        
+        <div>
+          <h2 id="profile-name-large" class="text-lg font-bold">Crypto Hunter</h2>
+          <p id="profile-username" class="text-xs font-mono text-slate-400">@tg_user</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-2">
+          <div class="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 text-left">
+            <span class="text-[11px] text-slate-400 block font-medium">Codes Claimed</span>
+            <span id="stat-claimed-count" class="text-xl font-bold text-slate-800 dark:text-slate-100">0</span>
+          </div>
+          <div class="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 text-left">
+            <span class="text-[11px] text-slate-400 block font-medium">Codes Skipped</span>
+            <span id="stat-skipped-count" class="text-xl font-bold text-slate-800 dark:text-slate-100">0</span>
+          </div>
+        </div>
+
+        <div class="pt-3">
+          <button onclick="App.resetViewedHistory()" class="w-full py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold rounded-2xl transition flex items-center justify-center gap-2">
+            <i data-lucide="rotate-ccw" class="w-4 h-4 text-slate-500"></i>
+            <span>Reset Seen History & Restart Deck</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MOBILE BOTTOM NAVIGATION ==================== -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#131822]/95 border-t border-slate-200/80 dark:border-slate-800/80 glass-nav">
+    <div class="max-w-md mx-auto px-6 h-16 flex items-center justify-around">
+      
+      <button onclick="App.switchTab('home')" id="tab-btn-home" class="flex flex-col items-center gap-1 text-binance-yellow py-1 px-4 transition">
+        <i data-lucide="layers" class="w-5 h-5"></i>
+        <span class="text-[11px] font-semibold">Boxes</span>
+      </button>
+
+      <button onclick="App.switchTab('saved')" id="tab-btn-saved" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 py-1 px-4 transition">
+        <i data-lucide="bookmark" class="w-5 h-5"></i>
+        <span class="text-[11px] font-semibold">Saved</span>
+      </button>
+
+      <button onclick="App.switchTab('profile')" id="tab-btn-profile" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 py-1 px-4 transition">
+        <i data-lucide="user" class="w-5 h-5"></i>
+        <span class="text-[11px] font-semibold">Profile</span>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- ==================== MODAL: SETTINGS ==================== -->
+  <div id="modal-settings" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white dark:bg-[#161C26] w-full max-w-md rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <h3 class="font-bold text-base">App Preferences</h3>
+        <button onclick="App.closeSettings()" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="moon" class="w-4 h-4 text-slate-400"></i>
+            <span class="font-medium">Theme Mode</span>
+          </div>
+          <button onclick="App.toggleTheme()" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 font-bold rounded-xl">
+            Toggle
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="zap" class="w-4 h-4 text-slate-400"></i>
+            <span class="font-medium">Confetti Animation</span>
+          </div>
+          <input type="checkbox" id="setting-confetti" checked onchange="App.toggleConfetti(this.checked)" class="w-4 h-4 accent-binance-yellow rounded cursor-pointer">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST NOTIFICATION CONTAINER ==================== -->
+  <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-[92%] max-w-sm pointer-events-none"></div>
+
+  <!-- ==================== JAVASCRIPT APP LOGIC ==================== -->
+  <script>
+    /**
+     * CryptoBox Hub - Single Code Carousel Claiming System
+     */
+    const State = {
+      user: {
+        firstName: 'Binance',
+        lastName: 'Claimer',
+        username: 'cryptouser',
+        photoUrl: '',
+        claimedCount: parseInt(localStorage.getItem('cb_stat_claimed') || '0', 10),
+        skippedCount: parseInt(localStorage.getItem('cb_stat_skipped') || '0', 10),
+      },
+      allCodes: [],
+      viewedCodes: JSON.parse(localStorage.getItem('cb_viewed_codes') || '[]'),
+      savedCodes: JSON.parse(localStorage.getItem('cb_saved_codes') || '[]'),
+      unviewedQueue: [],
+      currentIndex: 0,
+      enableConfetti: localStorage.getItem('cb_confetti') !== 'false',
+      activeTab: 'home'
+    };
+
+    const App = {
+      async init() {
+        this.initTelegram();
+        this.initTheme();
+        await this.fetchCodes();
+        this.renderProfile();
+        lucide.createIcons();
+      },
+
+      initTelegram() {
+        if (window.Telegram && window.Telegram.WebApp) {
+          const tg = window.Telegram.WebApp;
+          tg.ready();
+          tg.expand();
+
+          if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            const u = tg.initDataUnsafe.user;
+            State.user.firstName = u.first_name || State.user.firstName;
+            State.user.lastName = u.last_name || '';
+            State.user.username = u.username || 'tg_user';
+          }
+        }
+
+        const initial = (State.user.firstName || 'C').charAt(0).toUpperCase();
+        document.getElementById('header-avatar').innerText = initial;
+        document.getElementById('header-name').innerText = `${State.user.firstName} ${State.user.lastName}`.trim();
+      },
+
+      initTheme() {
+        const savedTheme = localStorage.getItem('cb_theme') || 'light';
+        if (savedTheme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      },
+
+      toggleTheme() {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('cb_theme', isDark ? 'dark' : 'light');
+      },
+
+      // --- ASYNC DATA FETCHING (codes.json) ---
+      async fetchCodes() {
+        this.showToast('Refreshing', 'Fetching latest Crypto Boxes...', 'info');
+        
+        try {
+          const response = await fetch('codes.json', { cache: 'no-cache' });
+          if (!response.ok) throw new Error('Network response not ok');
+          const data = await response.json();
+          if (Array.isArray(data) && data.length > 0) {
+            State.allCodes = data;
+          } else {
+            throw new Error('Empty array in codes.json');
+          }
+        } catch (err) {
+          console.warn('codes.json load fallback to bundled defaults:', err.message);
+          // Graceful fallback if codes.json is not yet uploaded or offline
+          State.allCodes = [
+            { code: "BPX99Q2L", createdAt: new Date().toISOString(), coin: "USDT" },
+            { code: "BNB77K81", createdAt: new Date().toISOString(), coin: "BNB" },
+            { code: "TON44P09", createdAt: new Date().toISOString(), coin: "TON" },
+            { code: "SOL12Z88", createdAt: new Date().toISOString(), coin: "SOL" },
+            { code: "SHIB9999", createdAt: new Date().toISOString(), coin: "SHIB" },
+            { code: "BTC88888", createdAt: new Date().toISOString(), coin: "BTC" }
+          ];
+        }
+
+        this.filterUnviewedQueue();
+        this.renderCurrentCard();
+      },
+
+      filterUnviewedQueue() {
+        // Filter out codes that have already been viewed by the user
+        State.unviewedQueue = State.allCodes.filter(item => !State.viewedCodes.includes(item.code));
+        State.currentIndex = 0;
+
+        const total = State.allCodes.length;
+        const remaining = State.unviewedQueue.length;
+
+        document.getElementById('active-queue-count').innerText = `${remaining} available to claim`;
+        document.getElementById('queue-indicator').innerText = remaining > 0 ? `Box 1 of ${remaining}` : '0 / 0';
+      },
+
+      // --- SINGLE CARD RENDERER ---
+      renderCurrentCard() {
+        const slot = document.getElementById('single-card-slot');
+        const remaining = State.unviewedQueue.length;
+
+        if (remaining === 0) {
+          slot.innerHTML = `
+            <div class="w-full bg-white/95 dark:bg-[#141922]/95 backdrop-blur-md p-8 rounded-3xl border border-slate-200 dark:border-slate-800/80 shadow-md text-center space-y-4">
+              <div class="w-16 h-16 mx-auto rounded-3xl bg-amber-500/10 text-binance-yellow flex items-center justify-center">
+                <i data-lucide="package-check" class="w-8 h-8"></i>
+              </div>
+              <div class="space-y-1">
+                <h3 class="font-bold text-base">No More Codes Available!</h3>
+                <p class="text-xs text-slate-400 max-w-xs mx-auto">
+                  You've claimed or viewed all current Crypto Boxes. Check back in a few minutes for new drops!
+                </p>
+              </div>
+              <div class="pt-2 flex flex-col gap-2">
+                <button onclick="App.fetchCodes()" class="w-full py-3 bg-binance-yellow text-slate-900 font-bold rounded-2xl text-xs hover:bg-binance-yellowHover active:scale-98 transition flex items-center justify-center gap-2 shadow-md shadow-yellow-500/10">
+                  <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+                  <span>Check For New Codes</span>
+                </button>
+                <button onclick="App.resetViewedHistory()" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold rounded-2xl text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                  Restart Deck (View All Again)
+                </button>
+              </div>
+            </div>
+          `;
+          document.getElementById('queue-indicator').innerText = 'Completed';
+          lucide.createIcons();
+          return;
+        }
+
+        const item = State.unviewedQueue[State.currentIndex];
+        const isSaved = State.savedCodes.includes(item.code);
+        const coinName = item.coin || 'CRYPTO';
+        
+        // Format timestamp safely
+        let timeFormatted = 'Recently added';
+        if (item.createdAt) {
+          try {
+            const date = new Date(item.createdAt);
+            timeFormatted = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          } catch(e){}
+        }
+
+        document.getElementById('queue-indicator').innerText = `${State.currentIndex + 1} of ${remaining}`;
+
+        slot.innerHTML = `
+          <div id="active-card" class="card-transition w-full bg-white/95 dark:bg-[#141922]/95 backdrop-blur-md p-6 sm:p-7 rounded-3xl border border-slate-200 dark:border-slate-800/80 shadow-xl space-y-6">
+            
+            <!-- Card Header Meta -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-binance-yellow/10 border border-binance-yellow/30 flex items-center justify-center text-binance-yellow">
+                  <i data-lucide="gift" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-sm text-slate-900 dark:text-white">${coinName} Red Packet</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 font-bold">LIVE</span>
+                  </div>
+                  <span class="text-[11px] text-slate-400 font-mono">Added at ${timeFormatted}</span>
+                </div>
+              </div>
+
+              <!-- Save / Bookmark Toggle -->
+              <button onclick="App.toggleSaveCode('${item.code}')" class="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-binance-yellow transition">
+                <i data-lucide="bookmark" class="w-5 h-5 ${isSaved ? 'fill-binance-yellow text-binance-yellow' : ''}"></i>
+              </button>
+            </div>
+
+            <!-- Prominent Box Code Badge -->
+            <div class="bg-gradient-to-b from-slate-50 to-slate-100 dark:from-[#181F2A] dark:to-[#131821] p-5 rounded-2xl border border-slate-200 dark:border-slate-800/90 text-center space-y-1.5 shadow-inner">
+              <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Binance Crypto Box Code</span>
+              <div class="font-mono text-2xl sm:text-3xl font-extrabold tracking-widest text-slate-900 dark:text-binance-yellow select-all py-1">
+                ${item.code}
+              </div>
+              <span class="text-[10px] text-slate-400 flex items-center justify-center gap-1">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-500"></i>
+                Ready to paste in Binance Pay
+              </span>
+            </div>
+
+            <!-- Action Buttons: Large & Touch Friendly -->
+            <div class="space-y-2.5 pt-1">
+              <button onclick="App.copyCurrentCode('${item.code}')" class="w-full py-4 bg-binance-yellow text-slate-950 font-bold rounded-2xl text-sm hover:bg-binance-yellowHover active:scale-[0.98] transition flex items-center justify-center gap-2.5 shadow-lg shadow-yellow-500/20">
+                <i data-lucide="copy" class="w-5 h-5 stroke-[2.5]"></i>
+                <span class="tracking-wide">Copy Code</span>
+              </button>
+
+              <button onclick="App.nextCode(true)" class="w-full py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold rounded-2xl text-xs hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-[0.98] transition flex items-center justify-center gap-2">
+                <span>Next (নেক্সট)</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+          </div>
+        `;
+        lucide.createIcons();
+      },
+
+      // --- COPY ACTION ---
+      copyCurrentCode(code) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(code).then(() => {
+            this.onCopySuccess();
+          }).catch(() => {
+            this.fallbackCopy(code);
+          });
+        } else {
+          this.fallbackCopy(code);
+        }
+      },
+
+      fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          this.onCopySuccess();
+        } catch (e) {
+          this.showToast('Error', 'Clipboard copy failed.', 'error');
+        }
+        document.body.removeChild(ta);
+      },
+
+      onCopySuccess() {
+        this.showToast('Copied!', 'Open Binance App → Pay → Red Packet to claim.', 'success');
+
+        if (State.enableConfetti && typeof confetti === 'function') {
+          confetti({
+            particleCount: 50,
+            spread: 60,
+            origin: { y: 0.75 },
+            colors: ['#F0B90B', '#10B981', '#3B82F6']
+          });
+        }
+
+        // Increment user claimed stat
+        State.user.claimedCount++;
+        localStorage.setItem('cb_stat_claimed', State.user.claimedCount.toString());
+        this.renderProfile();
+      },
+
+      // --- NEXT (NEXT CARD TRANSITION) ---
+      nextCode(isSkip = false) {
+        const card = document.getElementById('active-card');
+        if (!card || State.unviewedQueue.length === 0) return;
+
+        const currentCode = State.unviewedQueue[State.currentIndex].code;
+
+        // Mark current code as viewed in persistent storage
+        if (!State.viewedCodes.includes(currentCode)) {
+          State.viewedCodes.push(currentCode);
+          localStorage.setItem('cb_viewed_codes', JSON.stringify(State.viewedCodes));
+        }
+
+        if (isSkip) {
+          State.user.skippedCount++;
+          localStorage.setItem('cb_stat_skipped', State.user.skippedCount.toString());
+          this.renderProfile();
+        }
+
+        // Animate card slide out
+        card.classList.add('card-exit');
+
+        setTimeout(() => {
+          // Remove from active queue
+          State.unviewedQueue.splice(State.currentIndex, 1);
+          
+          // Re-render
+          this.renderCurrentCard();
+          const newCard = document.getElementById('active-card');
+          if (newCard) {
+            newCard.classList.add('card-enter');
+            requestAnimationFrame(() => {
+              newCard.classList.remove('card-enter');
+            });
+          }
+          
+          document.getElementById('active-queue-count').innerText = `${State.unviewedQueue.length} available to claim`;
+        }, 220);
+      },
+
+      // --- BOOKMARK / SAVED SYSTEM ---
+      toggleSaveCode(code) {
+        if (State.savedCodes.includes(code)) {
+          State.savedCodes = State.savedCodes.filter(c => c !== code);
+          this.showToast('Removed', 'Code removed from saved list.', 'info');
+        } else {
+          State.savedCodes.push(code);
+          this.showToast('Saved', 'Code saved to your bookmarks.', 'success');
+        }
+        localStorage.setItem('cb_saved_codes', JSON.stringify(State.savedCodes));
+        this.renderCurrentCard();
+        this.renderSavedList();
+      },
+
+      renderSavedList() {
+        const container = document.getElementById('saved-codes-list');
+        if (State.savedCodes.length === 0) {
+          container.innerHTML = `
+            <div class="p-8 text-center bg-white/95 dark:bg-[#141922]/95 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2">
+              <i data-lucide="bookmark" class="w-8 h-8 text-slate-400 mx-auto"></i>
+              <h4 class="font-bold text-sm">No Saved Codes</h4>
+              <p class="text-xs text-slate-400">Bookmark codes from the main feed to access them here.</p>
+            </div>
+          `;
+          lucide.createIcons();
+          return;
+        }
+
+        container.innerHTML = State.savedCodes.map(code => `
+          <div class="p-4 bg-white/95 dark:bg-[#141922]/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
+            <div>
+              <span class="text-xs text-slate-400 block font-medium">Binance Box</span>
+              <span class="font-mono text-base font-bold text-slate-800 dark:text-binance-yellow">${code}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="App.copyCurrentCode('${code}')" class="px-3.5 py-2 bg-binance-yellow text-slate-900 rounded-xl text-xs font-bold hover:bg-yellow-400 transition">
+                Copy
+              </button>
+              <button onclick="App.toggleSaveCode('${code}')" class="p-2 text-rose-500 hover:bg-rose-500/10 rounded-xl transition">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        `).join('');
+        lucide.createIcons();
+      },
+
+      clearSavedCodes() {
+        State.savedCodes = [];
+        localStorage.setItem('cb_saved_codes', JSON.stringify(State.savedCodes));
+        this.renderSavedList();
+        this.renderCurrentCard();
+        this.showToast('Cleared', 'Saved codes list cleared.', 'info');
+      },
+
+      resetViewedHistory() {
+        State.viewedCodes = [];
+        localStorage.removeItem('cb_viewed_codes');
+        this.filterUnviewedQueue();
+        this.renderCurrentCard();
+        this.showToast('Reset Complete', 'All codes are available in the queue again.', 'success');
+      },
+
+      // --- PROFILE & SETTINGS ---
+      renderProfile() {
+        const initial = (State.user.firstName || 'C').charAt(0).toUpperCase();
+        document.getElementById('profile-avatar-large').innerText = initial;
+        document.getElementById('profile-name-large').innerText = `${State.user.firstName} ${State.user.lastName}`.trim();
+        document.getElementById('profile-username').innerText = `@${State.user.username}`;
+        document.getElementById('stat-claimed-count').innerText = State.user.claimedCount;
+        document.getElementById('stat-skipped-count').innerText = State.user.skippedCount;
+      },
+
+      openSettings() {
+        document.getElementById('modal-settings').classList.remove('hidden');
+        document.getElementById('modal-settings').classList.add('flex');
+        lucide.createIcons();
+      },
+
+      closeSettings() {
+        document.getElementById('modal-settings').classList.add('hidden');
+        document.getElementById('modal-settings').classList.remove('flex');
+      },
+
+      toggleConfetti(checked) {
+        State.enableConfetti = checked;
+        localStorage.setItem('cb_confetti', checked ? 'true' : 'false');
+      },
+
+      // --- NAVIGATION CONTROLLER ---
+      switchTab(tab) {
+        State.activeTab = tab;
+        ['home', 'saved', 'profile'].forEach(t => {
+          const view = document.getElementById(`view-${t}`);
+          const btn = document.getElementById(`tab-btn-${t}`);
+          if (t === tab) {
+            view.classList.remove('hidden');
+            btn.className = 'flex flex-col items-center gap-1 text-binance-yellow py-1 px-4 transition font-bold';
+          } else {
+            view.classList.add('hidden');
+            btn.className = 'flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 py-1 px-4 transition font-semibold';
+          }
+        });
+
+        if (tab === 'saved') this.renderSavedList();
+        if (tab === 'profile') this.renderProfile();
+        lucide.createIcons();
+      },
+
+      // --- TOAST NOTIFICATIONS ---
+      showToast(title, message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        
+        let borderCol = 'border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-[#181E27]/95';
+        let iconMarkup = '<i data-lucide="info" class="w-4 h-4 text-blue-500"></i>';
+
+        if (type === 'success') {
+          borderCol = 'border-emerald-500/40 bg-white/95 dark:bg-[#181E27]/95';
+          iconMarkup = '<i data-lucide="check-circle" class="w-4 h-4 text-emerald-500"></i>';
+        } else if (type === 'error') {
+          borderCol = 'border-rose-500/40 bg-white/95 dark:bg-[#181E27]/95';
+          iconMarkup = '<i data-lucide="alert-circle" class="w-4 h-4 text-rose-500"></i>';
+        }
+
+        toast.className = `p-3.5 rounded-2xl border ${borderCol} shadow-xl flex items-start gap-3 backdrop-blur-md transition-all duration-300 transform -translate-y-2 opacity-0 pointer-events-auto`;
+        toast.innerHTML = `
+          <div class="mt-0.5">${iconMarkup}</div>
+          <div class="flex-1">
+            <h5 class="text-xs font-bold leading-tight">${title}</h5>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">${message}</p>
+          </div>
+        `;
+
+        container.appendChild(toast);
+        lucide.createIcons();
+
+        setTimeout(() => toast.classList.remove('-translate-y-2', 'opacity-0'), 10);
+        setTimeout(() => {
+          toast.classList.add('opacity-0', '-translate-y-2');
+          setTimeout(() => toast.remove(), 300);
+        }, 2800);
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => App.init());
+  </script>
+</body>
+</html>
