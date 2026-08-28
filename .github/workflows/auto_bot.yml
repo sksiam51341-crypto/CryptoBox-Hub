@@ -1,0 +1,32 @@
+name: Binance Code Auto Collector
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # প্রতি ৫ মিনিট পর পর ব্যাকগ্রাউন্ডে অটোমেটিক চলবে
+  workflow_dispatch:        # যেকোনো সময় ম্যানুয়ালি রান করার জন্য
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Execute Collector Bot
+        run: python fetch_codes.py
+
+      - name: Commit & Push JSON Updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Auto Bot"
+          git add codes.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-updated fresh Binance codes" && git push)
